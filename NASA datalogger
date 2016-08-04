@@ -1,0 +1,171 @@
+#include "DHT.h"
+
+#include <FastIO.h>
+#include <I2CIO.h>
+#include <LCD.h>
+#include <LiquidCrystal.h>
+#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal_SR.h>
+#include <LiquidCrystal_SR2W.h>
+#include <LiquidCrystal_SR3W.h>
+
+
+#include <Adafruit_MPL3115A2.h>
+#include <SD.h>
+#include <SPI.h>
+#include <Wire.h> 
+
+
+#define DHTPIN 2 
+#define DHTTYPE DHT22 //Using the DHT-22 model from Adafruit
+DHT dht(DHTPIN, DHTTYPE);
+
+
+
+LiquidCrystal_I2C lcd(0x3F, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE); //address of LCD display
+
+const int chipSelect = 10;
+
+const int power = 9;
+
+
+Adafruit_MPL3115A2 baro = Adafruit_MPL3115A2();
+
+
+void setup() {
+  
+Serial.begin(9600);
+
+pinMode(chipSelect, OUTPUT);
+
+lcd.begin(16, 2);
+
+pinMode(power, OUTPUT);
+
+Serial.println("Hello! Beginning the initialization process NOW!");
+
+dht.begin();
+Serial.println("DHT successfully initialized");
+
+
+
+
+lcd.setCursor(0,0);
+lcd.print("Hello");
+lcd.setCursor(0,1);
+lcd.print("Team Antares");
+delay(4000);
+lcd.clear();
+
+
+lcd.print("Initializing");
+lcd.setCursor(0,1);
+lcd.print("Sensors");
+delay(2000);
+lcd.clear();
+
+lcd.print("Please Standby");
+delay(2000);
+lcd.clear();
+
+if(!SD.begin(chipSelect))
+{
+  lcd.print("SD FAIL");
+  return;
+}
+lcd.setCursor(0,0);
+lcd.print("SD success");
+delay(2000);
+lcd.clear();
+
+
+if(!baro.begin())
+{
+  lcd.print("MPL FAIL");
+  return;
+}
+lcd.setCursor(0,0);
+lcd.print("MPL success");
+delay(2000);
+lcd.clear();
+
+
+
+lcd.print("Ready for launch");
+delay(2000);
+lcd.clear();
+
+}
+
+
+
+
+
+void loop() {
+
+
+
+
+File data = SD.open("NASA.csv", FILE_WRITE);
+
+
+if(data){
+
+float realAltitude = baro.getAltitude();
+data.print("Altitude");
+data.print(",");
+data.print(realAltitude);
+data.print(",");
+lcd.setCursor(0,0);
+lcd.print("Altitude: ");
+lcd.setCursor(11,0);
+lcd.print(realAltitude);
+
+
+
+float temperature = dht.readTemperature();
+float f = dht.readTemperature(true);
+data.print("Temperature");
+data.print(",");
+data.print(f);
+data.print(",");
+lcd.setCursor(0,1);
+lcd.print("Temp: ");
+lcd.setCursor(5,1);
+lcd.print(f);
+delay(1000);
+lcd.clear();
+
+
+float humidity = dht.readHumidity();
+data.print("Humidity");
+data.print(",");
+data.print(humidity);
+data.print(",");
+lcd.setCursor(0,0);
+lcd.print("Humidity:");
+lcd.setCursor(10,0);
+lcd.print(humidity);
+lcd.setCursor(15,0);
+lcd.print("%");
+
+
+float pressure = baro.getPressure();
+float inches = (pressure / 3377);
+data.print("Pressure (in of Hg)");
+data.print(",");
+data.print(inches);
+data.print(",");
+lcd.setCursor(0,1);
+lcd.print("Pressure: ");
+lcd.setCursor(10,1);
+lcd.print(inches);
+delay(1000);
+lcd.clear();
+
+data.println();
+
+
+data.close();
+}
+}
